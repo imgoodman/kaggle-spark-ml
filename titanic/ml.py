@@ -156,7 +156,14 @@ data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extr
 #print len(data.first().features)
 #print data.take(10)
 
-svmModel=SVMWithSGD.train(data, iterations=100)
-svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
-svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
-print "SVMWithSGD model accuracy is: %f" % svmAccuracy
+
+def predict_SVMWithSGD(numIterations):
+    svmModel=SVMWithSGD.train(data, iterations=numInterations)
+    svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
+    svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
+    print "SVMWithSGD model accuracy is: %f in $d iterations" % (svmAccuracy, numIterations)
+def test_SVMWithSGD():
+    svmIterations=[10,20,50,100,200]
+    for i in svmIterations:
+        predict_SVMWithSGD(i)
+test_SVMWithSGD()
