@@ -2,6 +2,7 @@
 import numpy as np
 from pyspark import SparkContext
 from pyspark.mllib.regression import LabeledPoint
+from pyspark.mllib.classification import SVMModel, SVMWithSGD
 
 sc=SparkContext("local[2]","titanic spark app")
 
@@ -139,7 +140,7 @@ def extract_features(fields):
 
     # parch
     parch_vector=np.zeros(len(sibsp_map))
-    parch_vector[sibsp_map[fields[parch_idx]]]=1.0
+    parch_vector[parch_map[fields[parch_idx]]]=1.0
 
     # fere
     # to do
@@ -152,5 +153,10 @@ def extract_features(fields):
     return features
 
 data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
-print len(data.first().features)
-print data.take(10)
+#print len(data.first().features)
+#print data.take(10)
+
+svmModel=SVMWithSGD.train(data, iterations=100)
+svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
+svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
+print "SVMWithSGD model accuracy is: %f" % svmAccuracy
