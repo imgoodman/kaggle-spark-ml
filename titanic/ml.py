@@ -1,8 +1,10 @@
 #-*-coding:utf8-*-
 import numpy as np
+import operator
 from pyspark import SparkContext
 from pyspark.mllib.regression import LabeledPoint
-from pyspark.mllib.classification import SVMModel, SVMWithSGD
+from pyspark.mllib.classification import  SVMWithSGD, NaiveBayes
+#LogisticRregressionWithLBFGS
 
 sc=SparkContext("local[2]","titanic spark app")
 
@@ -157,19 +159,41 @@ data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extr
 #print data.take(10)
 data.cache()
 
-def predict_SVMWithSGD(numIterations):
-    svmModel=SVMWithSGD.train(data, iterations=numIterations)
+def predict_SVMWithSGD(numIterations,step,regParam,regType):
+    """
+    SVMWithSGD.train(data,iterations=100, step=1.0, regParam=0.01, miniBatchFraction=1.0, initialWeights=None, regType='l2',intercept=False, validateData=True,convergenceTol=0.001)
+    data: the training data, an RDD of LabeledPoint
+    iterations: the number of iterations, default 100
+    step: the step parameter used in SGD, default 1.0
+    regParam: the regularizer parameter, default 0.01
+    miniBatchFraction: fraction of data to be used for each SGD iteration, default 1.0
+    initialWeights: the initial weights, default None
+    regType: the type of regularizer used for training our model, allowed values ('l1':for using L1 regularization; 'l2':for using L2 regularization, default; None: for no regularization)
+    intercept: boolean parameter which indicates the use or not of the augmented representation for training data (i.e. whether bias feature are activated or not, default False)
+    validateData: boolean parameter which indicates if the algorithm should validate data before training, default True
+    convergenceTol: a condition which decides iteration termination, default 0.001
+    """
+    svmModel=SVMWithSGD.train(data, iterations=numIterations,step=step, regParam=regParam, regType=regType)
     svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
     svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
-    print "SVMWithSGD model accuracy is: %f in %d iterations" % (svmAccuracy, numIterations)
+    #print "SVMWithSGD model accuracy is: %f in %d iterations,step:%f;regParam:%f;regType:%s" % (svmAccuracy, numIterations,step,regParam,regType)
     return svmAccuracy
 def test_SVMWithSGD():
     svmIterations=[10,20,50,100,200]
-    svmAccuracy=[]
+    svmSteps=[0.01, 0.05,0.1,0.2,0.5,1.0]
+    svmRegParams=[0.01,0.05,0.1,0.2,0.5,1.0]
+    svmRegTypes=['l1', 'l2']
+    svmAccuracy={}
     for i in svmIterations:
-        svmAccuracy.append(predict_SVMWithSGD(i))
-    print svmAccuracy
-test_SVMWithSGD()
+        for step in svmSteps:
+            for regParam in svmRegParams:
+                for regType in svmRegTypes:
+                    k="iterations:%d,step:%f;regParam:%f;regType:%s" % (i, step, regParam, regType)
+                    svmAccuracy[k]=predict_SVMWithSGD(i,step,regParam,regType)
+    #print svmAccuracy
+    accuracySort=sorted(svmAccuracy.iteritems(),key=operator.itemgetter(1),reverse=True)
+    print accuracySort
+#test_SVMWithSGD()
 """
 10:61.7%
 20:61.6%
@@ -177,3 +201,25 @@ test_SVMWithSGD()
 100:61.7%
 200:61.8%
 """
+
+
+
+def predict_NaiveBayes(lamb):
+    """
+    NaiveBayes.train(data, lambda=1.0)
+    data: the training data of RDD of LabeledPoint
+    lambda: the smoothing parameter, default 1.0
+    """
+    naiveBayesModel=NaiveBayes.train(data, lamb)
+    naiveBayesMetrics=data.map(lambda p: (p.label, naiveBayesModel.predict(p.features)))
+    naiveBayesAccuracy=naiveBayesMetrics.filter(lambda (actual,pred):actual==pred).count()*1.0/data.count()
+    return naiveBayesAccuracy
+
+def test_NaiveBayes():
+    lambdas=[0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
+    naiveBayesAccuracy={}
+    for lamb in lambdas:
+        naiveBayesAccuracy[lamb]=predict_NaiveBayes(lamb)
+    accuracySort=sorted(naiveBayesAccuracy.iteritems(), key=operator.itemgetter(1), reverse=True)
+    print accuracySort
+test_NaiveBayes()
