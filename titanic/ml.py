@@ -3,8 +3,7 @@ import numpy as np
 import operator
 from pyspark import SparkContext
 from pyspark.mllib.regression import LabeledPoint
-from pyspark.mllib.classification import  SVMWithSGD, NaiveBayes
-#LogisticRregressionWithLBFGS
+from pyspark.mllib.classification import  SVMWithSGD, NaiveBayes,LogisticRegressionWithSGD
 
 sc=SparkContext("local[2]","titanic spark app")
 
@@ -222,4 +221,36 @@ def test_NaiveBayes():
         naiveBayesAccuracy[lamb]=predict_NaiveBayes(lamb)
     accuracySort=sorted(naiveBayesAccuracy.iteritems(), key=operator.itemgetter(1), reverse=True)
     print accuracySort
-test_NaiveBayes()
+#test_NaiveBayes()
+
+
+
+def predict_LogisticRegressionWithSGD(iterations,step,regParam,regType):
+    """
+    LogisticRegressionWithLBFGS.train(data, iterations=100, initialWeights=None, regParam=0.0, regType='l2', intercept=False, corrections=10, tolerance=1e-06, validateData=True, numClasses=2)
+    data: the training data, an RDD of LabeledPoint
+    iterations: the number of iterations
+    corrections: the number of corrections used in the LBFGS update. if a known updater is used for binary classification, it calls the ml implementation and this parameter will have no effect. default 10
+    tolerance: the convergence tolerance of iterations for L-BFGS
+    numClasses: the number of classes (i.e., outcomes) a label can take in Multinomial logistic regression, default 2
+    """
+    lrModel=LogisticRegressionWithSGD.train(data, iterations=iterations,step=step,regParam=regParam, regType=regType)
+    lrMetrics=data.map(lambda p: (p.label, lrModel.predict(p.features)))
+    lrAccuracy=lrMetrics.filter(lambda (actual,pred):actual==pred).count()*1.0/data.count()
+    return lrAccuracy
+
+def test_LogisticRegressionWithSGD():
+    lrIterations=[10,20,50,100,200]
+    lrRegParams=[0.01,0.05,0.1,0.2,0.5,1.0]
+    lrRegTypes=['l1', 'l2']
+    lrSteps=[0.01, 0.05,0.1,0.2,0.5,1.0]
+    lrAccuracy={}
+    for i in lrIterations:
+        for regParam in lrRegParams:
+            for regType in lrRegTypes:
+                for step in lrSteps:
+                    k="iterations:%d;step:%f;regParam:%f;regType:%s" % (i,step, regParam, regType)
+                    lrAccuracy[k]=predict_LogisticRegressionWithSGD(i,step,regParam,regType)
+    accuracySort=sorted(lrAccuracy.iteritems(), key=operator.itemgetter(1),reverse=True)
+    print accuracySort
+test_LogisticRegressionWithSGD()
