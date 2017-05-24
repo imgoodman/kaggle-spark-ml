@@ -23,7 +23,7 @@ raw_data=sc.textFile(input_file)
 """
 raw_records=raw_data.map(lambda line: line.split(","))
 #raw_records.cache()
-print raw_records.take(10)
+#print raw_records.take(10)
 
 survived_idx=1
 pclass_idx=2
@@ -155,15 +155,25 @@ def extract_features(fields):
 data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
 #print len(data.first().features)
 #print data.take(10)
-
+data.cache()
 
 def predict_SVMWithSGD(numIterations):
-    svmModel=SVMWithSGD.train(data, iterations=numInterations)
+    svmModel=SVMWithSGD.train(data, iterations=numIterations)
     svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
     svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
-    print "SVMWithSGD model accuracy is: %f in $d iterations" % (svmAccuracy, numIterations)
+    print "SVMWithSGD model accuracy is: %f in %d iterations" % (svmAccuracy, numIterations)
+    return svmAccuracy
 def test_SVMWithSGD():
     svmIterations=[10,20,50,100,200]
+    svmAccuracy=[]
     for i in svmIterations:
-        predict_SVMWithSGD(i)
+        svmAccuracy.append(predict_SVMWithSGD(i))
+    print svmAccuracy
 test_SVMWithSGD()
+"""
+10:61.7%
+20:61.6%
+50:63%
+100:61.7%
+200:61.8%
+"""
