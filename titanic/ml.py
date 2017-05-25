@@ -2,8 +2,11 @@
 import numpy as np
 import operator
 from pyspark import SparkContext
+from pyspark.mllib.linalg.distributed import RowMatrix
 from pyspark.mllib.regression import LabeledPoint
+from pyspark.mllib.feature import StandardScaler
 from pyspark.mllib.classification import  SVMWithSGD, NaiveBayes,LogisticRegressionWithSGD
+from pyspark.mllib.evaluation import BinaryClassificationMetrics
 
 sc=SparkContext("local[2]","titanic spark app")
 
@@ -120,7 +123,16 @@ S:644
 C:168
 NA:2
 """
-
+def extract_normal_features(fields):
+    features=[int(fields[pclass_idx]),convert_age(fields[age_idx]),int(fields[sibsp_idx]),int(fields[parch_idx]),float(fields[fare_idx])]
+    # sex
+    sex_vector=np.zeros(len(sex_map))
+    sex_vector[sex_map[fields[sex_idx]]]=1.0
+    # embarked
+    embarked_vector=np.zeros(len(embarked_map))
+    embarked_vector[embarked_map[convert_embarked(fields[embarked_idx])]]=1.0
+    features=np.concatenate((features, sex_vector, embarked_vector))
+    return features
 
 def extract_features(fields):
     features=[]
@@ -153,10 +165,45 @@ def extract_features(fields):
     features=np.concatenate((pclass_vector, sex_vector, [convert_age(fields[age_idx])], sibsp_vector, parch_vector, [float(fields[fare_idx])], embarked_vector))
     return features
 
-data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
+#data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
+data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_normal_features(fields)))
 #print len(data.first().features)
 #print data.take(10)
-data.cache()
+#data.cache()
+
+"""
+查看数据的分布情况
+找出均值较大
+方差较大的特征
+"""
+def distribution_data():
+    vectors=data.map(lambda p:p.features)
+    """
+    通过数据的每一行构成RowMatrix
+    """
+    matrix=RowMatrix(vectors)
+    matrixSummary=matrix.computeColumnSummaryStatistics()
+    print "mean of each column:"
+    print matrixSummary.mean()
+    print "min of each column:"
+    print matrixSummary.min()
+    print "max of each column:"
+    print matrixSummary.max()
+    print "variance of each column:"
+    print matrixSummary.variance()
+#distribution_data()
+
+labels=data.map(lambda p:p.label)
+features=data.map(lambda p:p.features)
+
+vectors=data.map(lambda p:p.features)
+scaler=StandardScaler(withMean=True, withStd=True).fit(vectors)
+#scaledData=data.map(lambda p:LabeledPoint(p.label, scaler.transform(p.features)))
+
+scaled_data=labels.zip(scaler.transform(features))
+scaledData=scaled_data.map(lambda (x,y):LabeledPoint(x,y))
+#scaledData.cache()
+#print scaledData.first().features
 
 def predict_SVMWithSGD(numIterations,step,regParam,regType):
     """
@@ -172,9 +219,10 @@ def predict_SVMWithSGD(numIterations,step,regParam,regType):
     validateData: boolean parameter which indicates if the algorithm should validate data before training, default True
     convergenceTol: a condition which decides iteration termination, default 0.001
     """
-    svmModel=SVMWithSGD.train(data, iterations=numIterations,step=step, regParam=regParam, regType=regType)
-    svmMetrics=data.map(lambda p:(p.label, svmModel.predict(p.features)))
+    svmModel=SVMWithSGD.train(scaledData, iterations=numIterations,step=step, regParam=regParam, regType=regType)
+    svmMetrics=scaledData.map(lambda p:(svmModel.predict(p.features),p.label))
     svmAccuracy=svmMetrics.filter(lambda (actual, pred) : actual==pred).count()*1.0/data.count()
+    metrics=BinaryClassificationMetrics(svmMetrics)
     #print "SVMWithSGD model accuracy is: %f in %d iterations,step:%f;regParam:%f;regType:%s" % (svmAccuracy, numIterations,step,regParam,regType)
     return svmAccuracy
 def test_SVMWithSGD():
@@ -209,8 +257,8 @@ def predict_NaiveBayes(lamb):
     data: the training data of RDD of LabeledPoint
     lambda: the smoothing parameter, default 1.0
     """
-    naiveBayesModel=NaiveBayes.train(data, lamb)
-    naiveBayesMetrics=data.map(lambda p: (p.label, naiveBayesModel.predict(p.features)))
+    naiveBayesModel=NaiveBayes.train(scaledData, lamb)
+    naiveBayesMetrics=scaledData.map(lambda p: (p.label, naiveBayesModel.predict(p.features)))
     naiveBayesAccuracy=naiveBayesMetrics.filter(lambda (actual,pred):actual==pred).count()*1.0/data.count()
     return naiveBayesAccuracy
 
@@ -234,8 +282,8 @@ def predict_LogisticRegressionWithSGD(iterations,step,regParam,regType):
     tolerance: the convergence tolerance of iterations for L-BFGS
     numClasses: the number of classes (i.e., outcomes) a label can take in Multinomial logistic regression, default 2
     """
-    lrModel=LogisticRegressionWithSGD.train(data, iterations=iterations,step=step,regParam=regParam, regType=regType)
-    lrMetrics=data.map(lambda p: (p.label, lrModel.predict(p.features)))
+    lrModel=LogisticRegressionWithSGD.train(scaledData, iterations=iterations,step=step,regParam=regParam, regType=regType)
+    lrMetrics=scaledData.map(lambda p: (p.label, lrModel.predict(p.features)))
     lrAccuracy=lrMetrics.filter(lambda (actual,pred):actual==pred).count()*1.0/data.count()
     return lrAccuracy
 
