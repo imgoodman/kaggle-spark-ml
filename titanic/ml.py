@@ -165,8 +165,8 @@ def extract_features(fields):
     features=np.concatenate((pclass_vector, sex_vector, [convert_age(fields[age_idx])], sibsp_vector, parch_vector, [float(fields[fare_idx])], embarked_vector))
     return features
 
-#data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
-data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_normal_features(fields)))
+data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_features(fields)))
+#data=raw_records.map(lambda fields:LabeledPoint(float(fields[survived_idx]),extract_normal_features(fields)))
 #print len(data.first().features)
 #print data.take(10)
 #data.cache()
@@ -240,7 +240,7 @@ def test_SVMWithSGD():
     #print svmAccuracy
     accuracySort=sorted(svmAccuracy.iteritems(),key=operator.itemgetter(1),reverse=True)
     print accuracySort
-#test_SVMWithSGD()
+test_SVMWithSGD()
 """
 10:61.7%
 20:61.6%
@@ -301,4 +301,4 @@ def test_LogisticRegressionWithSGD():
                     lrAccuracy[k]=predict_LogisticRegressionWithSGD(i,step,regParam,regType)
     accuracySort=sorted(lrAccuracy.iteritems(), key=operator.itemgetter(1),reverse=True)
     print accuracySort
-test_LogisticRegressionWithSGD()
+#test_LogisticRegressionWithSGD()
