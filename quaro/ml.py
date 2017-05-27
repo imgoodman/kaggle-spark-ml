@@ -22,6 +22,7 @@ train_df=pd.read_csv(train_file_path)
 
 sc=SparkContext("local[2]","spark quaro question pairs duplicate app")
 raw_data=sc.parallelize(train_df.values)
+total_pair_count=raw_data.count()
 #print raw_data.take(10)
 """
 终于躲开了question中带逗号
@@ -57,5 +58,30 @@ def loadRecord(line):
 """
 qid1s=raw_data.map(lambda fields:fields[1])
 qid2s=raw_data.map(lambda fields:fields[2])
-qids=qid1s.union(qid2s).distinct().count()
-print "total questions is: %d" % qids
+qids=qid1s.union(qid2s).distinct()
+#print "total questions is: %d" % qids.count()
+
+
+
+"""
+看重复的问题对有多少
+"""
+duplicate_pairs=raw_data.filter(lambda fields:int(fields[5])==1)
+#print "duplicate question pairs is: %d (%f, %d/%d)" % (duplicate_pairs.count(), 1.0*duplicate_pairs.count()/total_pair_count,duplicate_pairs, total_pair_count)
+
+
+
+"""
+探索问题长度的分布情况
+得到RDD pair：(qid, qtitle)
+"""
+q1s=raw_data.map(lambda fields: (fields[1], len(fields[3])))
+q2s=raw_data.map(lambda fields: (fields[2], len(fields[4])))
+#qs=qids.map(lambda qid: (qid, 0))
+#qs_join1=qs.leftOuterJoin(q1s)
+#qs_join2=qs_join1.leftOuterJoin(q2s)
+#print qs_join2.take(10)
+
+
+qid_len=q1s.cogroup(q2s)
+print qid_len.take(10)
