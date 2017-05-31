@@ -1,5 +1,9 @@
 #-*-coding:utf8-*-
 from pyspark import SparkContext
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 train_file_path="/usr/bigdata/data/houseprice/noheader_train.csv"
 
@@ -28,7 +32,7 @@ msubclass=raw_data.map(lambda fields:fields[1])
 """
 try to change to enumerate values
 """
-msubclass_map=getMapOfColumn(1)
+#msubclass_map=getMapOfColumn(1)
 
 """
 MSZoning
@@ -36,8 +40,14 @@ it seems that it is enumerated
 can into types
 """
 mszoning=raw_data.map(lambda fields:fields[2])
-#print mszoning.countByValue()
-mszoning_map=getMapOfColumn(2)
+mszoningCountByValue=mszoning.countByValue()
+#print(mszoningCountByValue.keys())
+#print(mszoningCountByValue.values())
+#mszoning_map=getMapOfColumn(2)
+plt.bar(range(len(mszoningCountByValue.keys())), mszoningCountByValue.values(), tick_label=mszoningCountByValue.keys())
+plt.savefig("/usr/bigdata/spark/kaggle-spark-ml-app/kaggle-spark-ml/houseprice/mszoning.png")
+plt.show()
+
 
 """
 LotFrontage
@@ -60,7 +70,7 @@ tyoe of road access
 enumerate: pave or grvl
 can into type
 """
-street_map=getMapOfColumn(5)
+#street_map=getMapOfColumn(5)
 
 """
 alley
@@ -73,61 +83,61 @@ value with NA
 LotShape
 enumerate 
 """
-lotshape_map=getMapOfColumn(7)
+#lotshape_map=getMapOfColumn(7)
 
 
 """
 LandContour
 """
-landcontour_map=getMapOfColumn(8)
+#landcontour_map=getMapOfColumn(8)
 
 """
 Utilities
 """
-utilities_map=getMapOfColumn(9)
+#utilities_map=getMapOfColumn(9)
 
 
 """
 LotConfig
 """
-lotconfig_map=getMapOfColumn(10)
+#lotconfig_map=getMapOfColumn(10)
 
 """
 LandSlope
 """
-landslope_map=getMapOfColumn(11)
+#landslope_map=getMapOfColumn(11)
 
 
 """
 Neighborhood
 """
-neighborhood_map=getMapOfColumn(12)
+#neighborhood_map=getMapOfColumn(12)
 
 """
 Condition1
 """
-condition1_map=getMapOfColumn(13)
+#condition1_map=getMapOfColumn(13)
 
 """
 Condition2
 """
-condition2_map=getMapOfColumn(14)
+#condition2_map=getMapOfColumn(14)
 
 
 """
 BldgType
 """
-bldgtype_map=getMapOfColumn(15)
+#bldgtype_map=getMapOfColumn(15)
 
 
 """
 HouseType
 """
-housetype_map=getMapOfColumn(16)
+#housetype_map=getMapOfColumn(16)
 
 """
 OverallQual
 """
-overallqual_map=getMapOfColumn(17)
+#overallqual_map=getMapOfColumn(17)
 
 
