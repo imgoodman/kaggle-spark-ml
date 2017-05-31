@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 train_file_path="/usr/bigdata/data/houseprice/noheader_train.csv"
-
+image_file_path="/usr/bigdata/spark/kaggle-spark-ml-app/kaggle-spark-ml/houseprice/"
 sc=SparkContext("local[2]","spark house price data exploration")
 
 raw_data=sc.textFile(train_file_path).map(lambda line:line.split(","))
@@ -20,6 +20,12 @@ print "total %d houses" % total_houses
 def getMapOfColumn(idx):
     return raw_data.map(lambda fields:fields[idx]).distinct().zipWithIndex().collectAsMap()
 
+def generateImage(itemCountByValue,itemName="", is_type=True):
+    if True==is_type:
+        plt.bar(range(len(itemCountByValue.keys())),itemCountByValue.values(), tick_label=itemCountByValue.keys())
+    else:
+        plt.bar([float(k) for k in itemCountByValue.keys()], itemCountByValue.values())
+    plt.savefig("%s%s.png" % (image_file_path, itemName))
 
 """
 msubclass
@@ -33,6 +39,8 @@ msubclass=raw_data.map(lambda fields:fields[1])
 try to change to enumerate values
 """
 #msubclass_map=getMapOfColumn(1)
+generateImage(msubclass.countByValue(),itemName="msubclass",is_type=False)
+
 
 """
 MSZoning
@@ -40,14 +48,14 @@ it seems that it is enumerated
 can into types
 """
 mszoning=raw_data.map(lambda fields:fields[2])
-mszoningCountByValue=mszoning.countByValue()
+#mszoningCountByValue=mszoning.countByValue()
 #print(mszoningCountByValue.keys())
 #print(mszoningCountByValue.values())
 #mszoning_map=getMapOfColumn(2)
-plt.bar(range(len(mszoningCountByValue.keys())), mszoningCountByValue.values(), tick_label=mszoningCountByValue.keys())
-plt.savefig("/usr/bigdata/spark/kaggle-spark-ml-app/kaggle-spark-ml/houseprice/mszoning.png")
-plt.show()
-
+#plt.bar(range(len(mszoningCountByValue.keys())), mszoningCountByValue.values(), tick_label=mszoningCountByValue.keys())
+#plt.savefig("/usr/bigdata/spark/kaggle-spark-ml-app/kaggle-spark-ml/houseprice/mszoning.png")
+#plt.show()
+#generateImage(mszoning.countByValue(), itemName="mszoning")
 
 """
 LotFrontage
