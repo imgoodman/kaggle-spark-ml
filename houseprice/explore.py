@@ -27,6 +27,13 @@ def generateImage(itemCountByValue,itemName="", is_type=True):
         plt.bar([float(k) for k in itemCountByValue.keys()], itemCountByValue.values())
     plt.savefig("%s%s.png" % (image_file_path, itemName))
 
+
+def generateHistImage(vals, item_name=""):
+    plt.hist([float(v) for v in vals])
+    plt.savefig("%shist_%s.png" % (image_file_path, item_name))
+
+saleprices=raw_data.map(lambda fields:fields[-1])
+generateHistImage(saleprices.collect())
 """
 msubclass
 the build class
@@ -39,7 +46,7 @@ msubclass=raw_data.map(lambda fields:fields[1])
 try to change to enumerate values
 """
 #msubclass_map=getMapOfColumn(1)
-generateImage(msubclass.countByValue(),itemName="msubclass",is_type=False)
+#generateImage(msubclass.countByValue(),itemName="msubclass",is_type=False)
 
 
 """
