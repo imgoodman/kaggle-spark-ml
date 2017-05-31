@@ -29,11 +29,11 @@ def generateImage(itemCountByValue,itemName="", is_type=True):
 
 
 def generateHistImage(vals, item_name=""):
-    plt.hist([float(v) for v in vals])
+    plt.hist([float(v) for v in vals], normed=True)
     plt.savefig("%shist_%s.png" % (image_file_path, item_name))
 
 saleprices=raw_data.map(lambda fields:fields[-1])
-generateHistImage(saleprices.collect())
+generateHistImage(saleprices.collect(), item_name="sale price")
 """
 msubclass
 the build class
